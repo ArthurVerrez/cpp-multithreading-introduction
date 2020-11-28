@@ -9,7 +9,7 @@ using namespace std;
 
 // ------------ Exercice 1 ------------ //
 /*Commentaires sur norm:
-On considère que l'adresse de U est alignée, on itère sur simplement sur les valeurs à la suite du pointeur et on utilise les fonctions de cmath.
+On considère que l'adresse de U est alignée, on itère simplement sur les valeurs à la suite du pointeur et on utilise les fonctions de cmath.
 */
 
 float norm(float* U, int n) {
