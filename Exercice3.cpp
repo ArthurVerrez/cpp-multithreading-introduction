@@ -38,6 +38,20 @@ struct thread_data{
     int indx_end; 
 };
 
+#define NB_THREADS 128
+
+struct thread_data thread_data_array[NB_THREADS];
+int thread_i;
+pthread_t thread_ptr[NB_THREADS];     
+float rs[NB_THREADS];
+
+__m128i minus1 = _mm_set1_epi32(-1);
+__m128 absmask = _mm_castsi128_ps(_mm_srli_epi32(minus1, 1));
+
+__m128 vecabs_and(__m128 v) {
+  return _mm_and_ps(absmask, v);
+}
+
 void *computeNormVectoriel(void *threadarg){
 
     int indx_end, id, indx_start;
@@ -60,22 +74,22 @@ void *computeNormVectoriel(void *threadarg){
     float ans_bis = 0.0;
     __m128 tmp;
 
-    for (int i = 0; i < nb_iters; ++i,ptr_1+=2,ptr_2+=2, u += VV){
+    for (int i = indx_start; i < nb_iters + indx_start; ++i,ptr_1+=2,ptr_2+=2, u += VV){
 
-        tmp = _mm_add_ps(_mm_sqrt_ps(*ptr_1),_mm_sqrt_ps(*ptr_2));
+        tmp = _mm_add_ps(_mm_sqrt_ps(vecabs_and(*ptr_1)),_mm_sqrt_ps(vecabs_and(*ptr_2)));
         tmp =_mm_hadd_ps(tmp,tmp);
         tmp =_mm_hadd_ps(tmp,tmp);
         ans_bis += tmp[0];
 
     };
-    
-    ans += ans_bis;
+    rs[id] = ans_bis;
+    //ans += ans_bis;
     pthread_exit(NULL);
     return 0;
 };
 
 void *computeNormScalaire(void *threadarg){
-    float tmp = 0;
+    float tmp = 0.0;
     int indx_end, id, indx_start;
     struct thread_data *thread_pointer_data;
 
@@ -88,18 +102,15 @@ void *computeNormScalaire(void *threadarg){
     float* u = thread_pointer_data->u;
     
     for (int i = indx_start ; i < indx_end ; i++) tmp += sqrt(abs(u[i]));
-
-    ans += tmp;
+    rs[id] = tmp;
+    cout << "thread() : " << id << " Res: " << tmp << endl;
+    //ans += tmp;
     pthread_exit(NULL);
     return 0;
 };
 
 float normPar(float* U, int n, int mode, int nb_threads)                                                                                                                                                                                        
 {                 
-    struct thread_data thread_data_array[nb_threads];
-    int thread_i;
-    pthread_t thread_ptr[nb_threads];     
-
     for (int i = 0 ; i < nb_threads ; i++){
         thread_i = i;
 
@@ -107,15 +118,15 @@ float normPar(float* U, int n, int mode, int nb_threads)
         thread_data_array[thread_i].u = U;
         thread_data_array[thread_i].indx_start = i*(n/nb_threads);
         thread_data_array[thread_i].indx_end = (i+1)*(n/nb_threads);
-        cout << "main() : creating thread, " << i << endl;
+        //cout << "main() : creating thread, " << i << endl;
         if (mode < 1){pthread_create(&thread_ptr[thread_i], NULL, computeNormScalaire, (void *) &thread_data_array[thread_i]);} 
         else {pthread_create(&thread_ptr[thread_i], NULL, computeNormVectoriel, (void *) &thread_data_array[thread_i]);}
     }      
 
     for(int i=0;i<nb_threads;i++){
-        pthread_join(thread_ptr[thread_i], NULL);
+        pthread_join(thread_ptr[i], NULL);
     }
-
+    for(int i=0;i<nb_threads;i++) ans += rs[i];
     return ans;                                                                                                                                        
 };
 
@@ -127,10 +138,22 @@ If we use mode = 1, we must have:
 int main()
 {
     float* U;
-    int n = 3200000;
+    int n = 64000000;
     posix_memalign((void**)&U, 16,  n * sizeof(float));
-    for (int i = 0; i < n; ++i){U[i] = 1.0;}
-    TIMER("Multi 4 threads with vectors");
-    ans = normPar(U,n,1,4);
+    for (int i = 0; i < n; ++i){U[i] = -1.0;}
+    TIMER("Multi 128 threads with vectoriel");
+    ans = normPar(U,n,1,NB_THREADS);
     cout << ans << endl;
 }
+
+/* Scalaire
+16: 452ms
+8: 352ms
+4: 250ms
+*/
+
+/* Vectoriel
+16: 165ms
+8: 132ms
+4: 110ms
+*/
