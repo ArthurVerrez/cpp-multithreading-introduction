@@ -16,7 +16,6 @@ On itère simplement sur les valeurs à la suite du pointeur et on utilise les f
 float norm(float *U, int n)
 {
     double accum = 0;
-    cout.precision(13);
     for (int i = 0; i < n; i++ , U++)
     {
         accum += sqrt(abs(*(U)));
@@ -230,7 +229,7 @@ float normPar(float *U, int n, int mode, int nb_threads)
         thread_data_array[i].rs = 0.0;
         thread_data_array[i].indx_start = i * (n / nb_threads);
         thread_data_array[i].indx_end = (i + 1) * (n / nb_threads);
-        cout << "main() : creating thread, " << i << endl;
+        //cout << "main() : creating thread, " << i << endl;
         if (mode < 1)
         {
             pthread_create(&thread_ptr[i], NULL, computeNormScalaire, (void *)&thread_data_array[i]);
@@ -261,6 +260,13 @@ If we use mode = 1 or 256, we must have:
     n % 8*nb_thr == 0
 */
 
+// ------------ Exercice 4 ------------ //
+/*Commentaires sur main:
+
+- différence de précision (1 pour 1m environ)
+
+*/
+
 float *get_aligned_vec(int N)
 {
     srand(time(NULL));
@@ -277,37 +283,6 @@ float *get_aligned_vec(int N)
     return a;
 };
 
-// ------------ Exercice 4 ------------ //
-/*Commentaires sur main:
-
-- différence de précision (1 pour 1million environ)
-- benchmark réalisé sur 10 expériences, pour nb_threads dans {4,8,16,32} et des vecteurs de tailles 
-    32*{1000,10000,100000,1000000,10000000,100000000}
-- benchmark aussi réalisé sous Java, les différentes fonctions utilisées sont présentes à la fin du fichier.
-
-Les résultats sont présentés en pièce-jointes (pdf).
-
-*/
-
-// ------------ Exercice 5 ------------ //
-/*Comment adapter vect_norm pour:
-    1. une addresse U non alignée
-    2. n quelconque
-
-1.
-Si n est toujours un multiple de 8, il est possible d'aligner U et de réutiliser la même fonction (que ce soit avec 
-```std::aligned_alloc```, ```posix_memalign``` ou plus recemment ```std::align_val_t```. 
-)
-
-Cependant, si l'on se refuse a aligner U, 
-
-2. 
-On peut utiliser 2 solutions (en fonction de ce qui est le mieux pour l'allocation mémoire):
-    - padder U avec des 0. jusqu'à ce que n soit multiple de 8 (au plus 7 ajouts)
-    - retirer les n%8 <= 7 dernières valeurs de U, puis les rajouter en utilisant norm.
-
-*/
-
 int main(int argc, char *argv[])
 {
 
@@ -318,96 +293,71 @@ int main(int argc, char *argv[])
     chrono::high_resolution_clock::time_point t1;
 	chrono::high_resolution_clock::time_point t2;
 
-    float res1, res2;
+    float res;
+    /*
+    We want to test for multiple n (32 * 1000, 10.000, 100.000, 1.000.000, 10.000.000, 100.000.000):
 
-    cout << "You have entered " << argc
-         << " arguments:"
-         << "\n";
+    -> norm 
+    -> vectoriel 128 
+    -> vectoriel 256 
+    -> thread norm 
+    -> thread vectoriel 128 
+    -> thread vectoriel 256
 
-    for (int i = 0; i < argc; ++i)
-        cout << "Argument " << i  << " -> " << argv[i] << "\n";
+    each 10x times. 
+    We also want to test for nb_threads in {4, 8, 16, 32}
+    */
 
-    // -----------------------
+    vector<int> sizes {1000,10000,100000,1000000,10000000,100000000};
+    vector<int> threads {4,8,16,32};
 
-    if(argc>1) {n=atoi(argv[1]);} else {n = 64000000;}
-    if(argc>2) {nb_threads=atoi(argv[2]);} else {nb_threads = 4;}
-    cout << " ---------------------------------------------- " << endl;
-    // -----------------------
+    // type fonction,n,threads,time
 
-    U = get_aligned_vec(n);
-    cout << "U : " << " ";
-    for (int i = 0 ; i < 10 ; i++){
-        cout <<*(U+i) << " ";
+    for (int q = 0 ; q < 10 ; q++){
+        for (int z = 0 ; z < 6 ; z++){
+            n = 32*sizes[z];
+            U = get_aligned_vec(n);
+
+            //norm 
+            t1 = chrono::high_resolution_clock::now();
+            res = norm(U, n);
+            t2 = chrono::high_resolution_clock::now();
+            cout << "norm," << n << "," << 1 << "," << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
+            //vectoriel 128 
+            t1 = chrono::high_resolution_clock::now();
+            res = vect_norm_128(U,n);
+            t2 = chrono::high_resolution_clock::now();
+            cout << "vectoriel 128," << n << "," << 1 << "," << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
+            //vectoriel 256 
+            t1 = chrono::high_resolution_clock::now();
+            res = vect_norm_256(U,n);
+            t2 = chrono::high_resolution_clock::now();
+            cout << "vectoriel 256," << n << "," << 1 << "," << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
+            //thread norm 
+            for (int c = 0 ; c < 4 ; c++){
+                nb_threads = threads[c];
+                t1 = chrono::high_resolution_clock::now();
+                res = normPar(U,n,0,nb_threads);
+                t2 = chrono::high_resolution_clock::now();
+                cout << "norm," << n << "," << nb_threads << "," << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
+            }
+            //thread vectoriel 128 
+            for (int c = 0 ; c < 4 ; c++){
+                nb_threads = threads[c];
+                t1 = chrono::high_resolution_clock::now();
+                res = normPar(U,n,128,nb_threads);
+                t2 = chrono::high_resolution_clock::now();
+                cout << "vectoriel 128," << n << "," << nb_threads << "," << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
+            }
+            //thread vectoriel 256
+            for (int c = 0 ; c < 4 ; c++){
+                nb_threads = threads[c];
+                t1 = chrono::high_resolution_clock::now();
+                res = normPar(U,n,256,nb_threads);
+                t2 = chrono::high_resolution_clock::now();
+                cout << "vectoriel 256," << n << "," << nb_threads << "," << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
+            }
+        }
     }
-    cout << " ... ";
-    cout << endl;
-    cout << " ---------------------------------------------- " << endl;
-    // Computation for scalaire and vectoriel + threads:
-    cout << "Function: norm" << endl;
-    t1 = chrono::high_resolution_clock::now();
-	res1 = norm(U, n);
-	t2 = chrono::high_resolution_clock::now();
-    cout << "Results: " << res1 << endl;
-    cout << "duration:" << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count()/1000 << "ms" << endl;
-    cout << " ---------------------------------------------- " << endl;
-
-    // Computation for scalaire and vectoriel + threads:
-    cout << "Function: normPar" << endl;
-    cout << "with nb_threads = " << nb_threads << endl;
-
-    t1 = chrono::high_resolution_clock::now();
-	res2 = normPar(U,n,1,nb_threads);
-	t2 = chrono::high_resolution_clock::now();
-
-    cout << "Results: " << res2 << endl;
-    cout << "duration:" << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count()/1000 << "ms" << endl;
-    cout << " ---------------------------------------------- " << endl;
 
 }
-
-/*
-Benchmark Java:
-
-JAVA-Traditional for-loop
-
-for (int i = 0; i < N; i++) {
-    res += (float)Math.sqrt(Math.abs(U.get(i)));
-}
-
-------------------------------
-
-JAVA-Traditional iterator-loop
-
-while (iterator.hasNext()) {
-    res += (float)Math.sqrt(Math.abs(iterator.next()));
-}
-
-------------------------------
-
-JAVA-for-loop object
-
-for (Float item : U) {
-    res += (float)Math.sqrt(Math.abs(item));
-}
-
-------------------------------
-
-JAVA-for-each lambda
-
-U.forEach(val -> Math.sqrt(Math.abs(val)));
-res = (float)U.stream()
-.mapToDouble(a -> a)
-.sum();
-
-------------------------------
-
-JAVA-parallel stream
-
-U.parallelStream().forEach(val -> Math.sqrt(Math.abs(val)));
-res = (float)U.parallelStream()
-.mapToDouble(a -> a)
-.sum();
-
-------------------------------
-
-*/

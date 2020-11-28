@@ -9,76 +9,80 @@ import java.util.stream.IntStream;
 
 public class NormBenchmark {
 
-    private static final int N = 64000000;
+    static int N;
 
     public static void main(String[] args) {
         List<Float> U = new ArrayList<Float>();
+        List<Integer> sizes = new ArrayList<Integer>();
         List<String> results = new ArrayList<>();
 
-        for (int i = 0 ; i < N ; i++){
-            U.add((float)1);
+        for (int k = 0; k < 10; k++){
+            sizes.add(1000);sizes.add(10000);sizes.add(100000);
+            sizes.add(1000000);
         }
 
-        IntStream.range(0, 10).forEach(x -> {
-
-            // for-loop old school 1M
-            Float res = (float) 0.;
-            Instant start = Instant.now();
+        // type fonction,n,threads,time
+                for (int z = 0 ; z < sizes.size(); z++){
+                    U.clear();
+                    N = 32 * sizes.get(z);
+                    for (int i = 0 ; i < N ; i++){
+                        U.add((float)1);
+                    }
+                // for-loop old school 1M
+                Float res = (float) 0.;
+                Instant start = Instant.now();
+                
+                for (int i = 0; i < N; i++) {
+                    res += (float)Math.sqrt(Math.abs(U.get(i)));
+                }
+    
+                Instant end = Instant.now();
+                Duration timeElapsed = Duration.between(start, end);
+                results.add(String.format("JAVA-Traditional for-loop,%s,%s,%s",N,1,timeElapsed.toNanos()/1000.));
+    
+                // iterator 1M
+                Iterator<Float> iterator = U.iterator();
+                res = (float) 0.;
+                start = Instant.now();
+    
+                while (iterator.hasNext()) {
+                    res += (float)Math.sqrt(Math.abs(iterator.next()));
+                }
+    
+                end = Instant.now();
+                timeElapsed = Duration.between(start, end);
+                results.add(String.format("JAVA-Traditional iterator-loop,%s,%s,%s",N,1,timeElapsed.toNanos()/1000.));
+                // 1M for-loop object
+                res = (float) 0.;
+                start = Instant.now();
+                for (Float item : U) {
+                    res += (float)Math.sqrt(Math.abs(item));
+                }
+                end = Instant.now();
+                timeElapsed = Duration.between(start, end);
+                results.add(String.format("JAVA-for-loop object,%s,%s,%s",N,1,timeElapsed.toNanos()/1000.));
+                // 1M for-each lambda
+                res = (float) 0.;
+                start = Instant.now();
+                U.forEach(val -> Math.sqrt(Math.abs(val)));
+                res = (float)U.stream()
+                .mapToDouble(a -> a)
+                .sum();
+                end = Instant.now();
+                timeElapsed = Duration.between(start, end);
+                results.add(String.format("JAVA-for-each lambda,%s,%s,%s",N,1,timeElapsed.toNanos()/1000.));
+                // 1M parallel stream for-each lambda
+                res = (float) 0.;
+                start = Instant.now();
+                U.parallelStream().forEach(val -> Math.sqrt(Math.abs(val)));
+                res = (float)U.parallelStream()
+                .mapToDouble(a -> a)
+                .sum();
+                end = Instant.now();
+                timeElapsed = Duration.between(start, end);
+                results.add(String.format("JAVA-parallel stream,%s,%s,%s",N,1,timeElapsed.toNanos()/1000.));
             
-            for (int i = 0; i < N; i++) {
-                res += (float)Math.sqrt(Math.abs(U.get(i)));
             }
-
-            Instant end = Instant.now();
-            Duration timeElapsed = Duration.between(start, end);
-            results.add(String.format("Traditional for-loop 1M: %s milliseconds - experiment %s ", timeElapsed.toMillis(), x));
-
-            // iterator 1M
-            Iterator<Float> iterator = U.iterator();
-            res = (float) 0.;
-            start = Instant.now();
-
-            while (iterator.hasNext()) {
-                res += (float)Math.sqrt(Math.abs(iterator.next()));
-            }
-
-            end = Instant.now();
-            timeElapsed = Duration.between(start, end);
-            results.add(String.format("Traditional iterator 1M: %s milliseconds - experiment %s ", timeElapsed.toMillis(), x));
-
-            // 1M for-loop object
-            res = (float) 0.;
-            start = Instant.now();
-            for (Float item : U) {
-                res += (float)Math.sqrt(Math.abs(item));
-            }
-            end = Instant.now();
-            timeElapsed = Duration.between(start, end);
-            results.add(String.format("for-loop object 1M: %s milliseconds - experiment %s ", timeElapsed.toMillis(), x));
-
-            // 1M for-each lambda
-            res = (float) 0.;
-            start = Instant.now();
-            U.forEach(val -> Math.sqrt(Math.abs(val)));
-            res = (float)U.stream()
-            .mapToDouble(a -> a)
-            .sum();
-            end = Instant.now();
-            timeElapsed = Duration.between(start, end);
-            results.add(String.format("for-each lambda 1M: %s milliseconds - experiment %s ", timeElapsed.toMillis(), x));
-
-            // 1M parallel stream for-each lambda
-            res = (float) 0.;
-            start = Instant.now();
-            U.parallelStream().forEach(val -> Math.sqrt(Math.abs(val)));
-            res = (float)U.parallelStream()
-            .mapToDouble(a -> a)
-            .sum();
-            end = Instant.now();
-            timeElapsed = Duration.between(start, end);
-            results.add(String.format("parallel stream for-each lambda 1M: %s milliseconds - experiment %s", timeElapsed.toMillis(), x));
-        });
-
         Collections.sort(results);
         results.forEach(System.out::println);
 
