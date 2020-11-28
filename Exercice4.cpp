@@ -296,10 +296,16 @@ Les résultats sont présentés en pièce-jointes (pdf).
 
 1.
 Si n est toujours un multiple de 8, il est possible d'aligner U et de réutiliser la même fonction (que ce soit avec 
-```std::aligned_alloc```, ```posix_memalign``` ou plus recemment ```std::align_val_t```. 
+```std::aligned_alloc```, ```posix_memalign``` ou plus récemment ```std::align_val_t```. 
 )
 
-Cependant, si l'on se refuse a aligner U, 
+Cependant, si l'on se refuse à aligner U, car l'on considère que cette opération prend trop de temps, il devient très
+difficile d'utiliser de la vectorisation. En effet, de nombreux problèmes peuvent advenir:
+* Le programme sera plus lent
+* L'OS peut crash
+* Le programme peut renvoyer des résultats incorrects.
+
+De manière générale, il est crucial d'aligner les adresses des variables utilisées pour faire de la vectorisation.
 
 2. 
 On peut utiliser 2 solutions (en fonction de ce qui est le mieux pour l'allocation mémoire):
