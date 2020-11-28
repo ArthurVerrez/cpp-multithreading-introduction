@@ -9,7 +9,7 @@ using namespace std;
 
 // ------------ Exercice 1 ------------ //
 /*Commentaires sur norm:
-
+On considère que l'adresse de U est alignée, on itère sur simplement sur les valeurs à la suite du pointeur et on utilise les fonctions de cmath.
 */
 
 float norm(float* U, int n) {
@@ -32,9 +32,9 @@ Comme l'addresse de U est alignée et que on suppose que n est un multiple de 8,
 
 Dans chaque cas, on a besoin de pouvoir calculer une racine, une valeur absolue, et la somme des composants.
 Pour la racine, ca ne pose pas de problèmes particuliers. Pour la somme, nous proposons deux méthodes différentes:
-    - sommes croisées deux fois d'affilés a l'aide de _mm_hadd_ps
+    - sommes croisées deux fois d'affilées a l'aide de _mm_hadd_ps
     - suite de shuffle et d'extraction du max
-Finalement, pour la valeur absolue, on utilise un mask qui vient enlever les bits responsables des signes.
+Finalement, pour la valeur absolue, on utilise un masque qui vient enlever les bits responsables des signes.
 
 Finalement, pour la fonction en elle même, on utilise un pointeur ```__m256* ptr = (__m256*)U;```
 (ou 2 en 128 :
@@ -44,7 +44,7 @@ __m128* ptr_2 = (__m128*)U;
 ++ptr_2; 
 ```
 )
-, qui sera décallé de 1 à chaque fois que U est décallé de 8. On peut ainsi parcourrir U et réalisé les différentes opérations.
+, qui sera décalé de 1 à chaque fois que U est décalé de 8. On peut ainsi parcourrir U et réaliser les différentes opérations.
 
 */
 
@@ -99,7 +99,7 @@ constexpr int VV  = 8;
 // _m256
 float vect_norm_256(float* U, int n)                                                                                                                                                                                        
 {                      
-    // We assume n % VV == 0.                                                                                                                                                                                        
+    // On considère que n % VV == 0.                                                                                                                                                                                        
     int nb_iters = n / VV;                                                                                                                                                                                         
     __m256* ptr = (__m256*)U;    
 
@@ -115,7 +115,7 @@ float vect_norm_256(float* U, int n)
 // _m128
 float vect_norm_128(float* U, int n)                                                                                                                                                                                        
 {                      
-    // We assume n % VV == 0.                                                                                                                                                                                        
+    // On considère que n % VV == 0.                                                                                                                                                                                        
     int nb_iters = n / VV;                                                                                                                                                                                         
     __m128* ptr_1 = (__m128*)U;   
     __m128* ptr_2 = (__m128*)U;  
