@@ -1,12 +1,8 @@
-# archi-mat-2020
-Projet de Paul Garnier et Arthur Verrez pour le cours d'Architecture matérielle et logicielle des ordinateurs de 2020.
-Le projet est à rendre d'ici le 20 décembre.
-Il peut être fait en C ou en C++.
+# C/C++ Multi-threading training [French]
+The goal of this repo is to give a set of exercises of multi-threading in C/C++ and to benchmark it with Python and Java.
 
-Pour tout ce qui est multithreading il faut utiliser les **posix thread** et pas de librairie plus haut niveau.
+This was done in the context of the course of software architecture of computers of Mines de Paris in 2020.
 
-Description du projet: https://www.cri.ensmp.fr/conf/cours/Projet_S1825_2020.pdf
+The goal is to not use any library of a higher level than **posix thread**.
 
-Slides de cours: http://www.hemisphere-education.net/cours/s1825/cours_archi_mines_SIMD.pdf
-
-Site du cours: http://www.hemisphere-education.net/cours/s1825/
+Please refer to *documentation.pdf* for the exercises. You can see a proposed solution for each exercise in the *solutions* folder.
